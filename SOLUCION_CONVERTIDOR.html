@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Convertidor CSV a EXCEL - Colegio Gymmart</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: #f0f2f5;
+        }
+
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        button {
+            background: #1976d2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <h1>🛠️ Herramienta de Conversión</h1>
+        <p>Seleccioná tu archivo CSV para descargarlo como Excel (.xlsx)</p>
+        <input type="file" id="csv-file" accept=".csv" style="margin-bottom: 20px;"><br>
+        <button onclick="convert()">Descargar como .XLSX</button>
+        <div id="status" style="margin-top: 20px;"></div>
+    </div>
+
+    <script>
+        function convert() {
+            const input = document.getElementById('csv-file');
+            const status = document.getElementById('status');
+            if (input.files.length === 0) return alert('Seleccioná un archivo primero.');
+
+            const file = input.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                try {
+                    const data = e.target.result;
+                    const workbook = XLSX.read(data, { type: 'string' });
+                    XLSX.writeFile(workbook, file.name.replace('.csv', '.xlsx'));
+                    status.innerHTML = '<b style="color:green">✅ ¡Convertido! Revisa tus descargas.</b>';
+                } catch (err) {
+                    status.innerHTML = '<b style="color:red">❌ Error: ' + err.message + '</b>';
+                }
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+
+</html>

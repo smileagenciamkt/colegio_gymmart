@@ -1,0 +1,28 @@
+{
+    "name": "Colegio Gymmart - Asistencia Pro",
+    "short_name": "Gymmart",
+    "description": "Sistema de gestión de asistencia escolar para el Colegio Gymmart.",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#6366f1",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "./app_icon_192_1772288301970.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "./app_icon_512_1772288289194.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "categories": [
+        "education",
+        "productivity"
+    ],
+    "lang": "es-PY"
+}

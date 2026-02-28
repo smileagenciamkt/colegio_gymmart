@@ -1,0 +1,21 @@
+# 📜 .gitignore - Colegio Gymmart Pro
+
+# Archivos de sistema y basura (macOS/Windows)
+.DS_Store
+Thumbs.db
+
+# Configuración de entornos de desarrollo
+.vscode/
+.idea/
+*.swp
+*.log
+
+# Archivos temporales de Gemini Antigravity
+.gemini/
+/tmp/
+*.tmp
+
+# Dependencias (si se agregara npm en el futuro)
+node_modules/
+dist/
+build/
