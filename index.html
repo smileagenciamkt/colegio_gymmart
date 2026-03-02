@@ -113,7 +113,8 @@
             flex-direction: column;
             padding: 24px;
             overflow-y: auto;
-            padding-bottom: 100px;
+            padding-bottom: 230px;
+            /* Much higher so saving bar has space */
             visibility: hidden;
             opacity: 0;
             transform: translateY(10px);
@@ -1001,6 +1002,46 @@
         </div>
     </div>
 
+    <!-- Modal de Añadir Alumno -->
+    <div id="add-student-modal" class="modal-overlay hidden">
+        <div class="glass-card modal-content" style="max-width: 400px;">
+            <header>
+                <h2>Añadir Alumno</h2>
+                <button class="btn-close" onclick="closeAddStudentModal()">✕</button>
+            </header>
+            <div class="modal-body" style="padding: 16px;">
+                <form id="add-student-form" onsubmit="window.handleAddStudent(event)">
+                    <div class="input-group" style="margin-bottom: 12px;">
+                        <label style="display:block; margin-bottom: 4px; font-weight: 600; font-size: 14px;">Curso
+                            *</label>
+                        <select id="new-student-course" required
+                            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background: rgba(0,0,0,0.02); font-family: 'Outfit';">
+                        </select>
+                    </div>
+                    <div class="input-group" style="margin-bottom: 12px;">
+                        <label style="display:block; margin-bottom: 4px; font-weight: 600; font-size: 14px;">Nombre
+                            *</label>
+                        <input type="text" id="new-student-name" required
+                            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background: rgba(0,0,0,0.02); font-family: 'Outfit';">
+                    </div>
+                    <div class="input-group" style="margin-bottom: 12px;">
+                        <label
+                            style="display:block; margin-bottom: 4px; font-weight: 600; font-size: 14px;">Apellido</label>
+                        <input type="text" id="new-student-last" placeholder="(Opcional)"
+                            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background: rgba(0,0,0,0.02); font-family: 'Outfit';">
+                    </div>
+                    <div class="input-group" style="margin-bottom: 20px;">
+                        <label style="display:block; margin-bottom: 4px; font-weight: 600; font-size: 14px;">Documento
+                            (C.I.)</label>
+                        <input type="text" id="new-student-doc" placeholder="(Opcional)"
+                            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background: rgba(0,0,0,0.02); font-family: 'Outfit';">
+                    </div>
+                    <button type="submit" class="btn-primary" style="width: 100%;">Guardar Alumno</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Pantallas Dinámicas (Templates) -->
     <template id="tpl-dashboard">
         <div class="dashboard-view">
@@ -1013,11 +1054,17 @@
                     <div class="date-display" id="current-date-text" style="font-weight: 500; opacity: 0.7;">--/--/----
                     </div>
                 </div>
-                <div class="filter-group" style="display: flex; align-items: center; gap: 8px;">
-                    <label style="margin: 0; font-size: 12px; font-weight: 700; color: var(--text-muted);">FILTRAR
-                        FECHA:</label>
-                    <input type="date" id="dashboard-filter-date"
-                        style="padding: 8px 12px; font-size: 14px; width: auto; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: white;">
+                <div class="filter-group" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <select id="dashboard-filter-course"
+                        style="padding: 8px 12px; font-size: 14px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: white; font-family: 'Outfit'; outline: none;">
+                        <option value="">Todos los Cursos</option>
+                    </select>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label
+                            style="margin: 0; font-size: 12px; font-weight: 700; color: var(--text-muted);">FECHA:</label>
+                        <input type="date" id="dashboard-filter-date"
+                            style="padding: 8px 12px; font-size: 14px; width: auto; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: white; font-family: 'Outfit'; outline: none;">
+                    </div>
                 </div>
             </header>
 
@@ -1063,9 +1110,12 @@
     </template>
 
     <template id="tpl-attendance">
-        <div class="attendance-view">
-            <header>
-                <h2>Tomar Asistencia</h2>
+        <div class="attendance-view" style="padding-bottom: 90px;">
+            <header style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0;">Tomar Asistencia</h2>
+                <button class="btn-primary" onclick="window.openAddStudentModal()"
+                    style="padding: 6px 16px; font-size: 14px; border-radius: 20px; box-shadow: 0 4px 12px rgba(99,102,241,0.3);">+
+                    Alumno</button>
             </header>
             <div class="selection-bar glass-card">
                 <select id="course-select">
@@ -1073,11 +1123,12 @@
                 </select>
                 <input type="date" id="attendance-date">
             </div>
-            <div id="students-list" class="students-container">
+            <div id="students-list" class="students-container" style="padding-bottom: 200px;">
                 <!-- Lista de alumnos -->
             </div>
-            <div class="action-bar hidden" id="attendance-actions">
-                <button id="save-attendance" class="btn-success">Guardar y Copiar Resumen</button>
+            <div class="action-bar hidden" id="attendance-actions"
+                style="position: fixed; bottom: 120px; left: 24px; right: 24px; z-index: 900; background: rgba(255,255,255,0.9); padding: 16px; border-radius: 20px; box-shadow: 0 -4px 20px rgba(0,0,0,0.05); backdrop-filter: blur(10px);">
+                <button id="save-attendance" class="btn-success" style="width: 100%;">Guardar y Copiar Resumen</button>
             </div>
         </div>
     </template>
@@ -1315,6 +1366,92 @@
             }
         }
 
+        // --- MODAL AÑADIR ALUMNO MANUAL ---
+        window.openAddStudentModal = function () {
+            const modal = document.getElementById('add-student-modal');
+            const select = document.getElementById('new-student-course');
+            // Llenar el select con los cursos cargados
+            if (state.courses && state.courses.length > 0) {
+                select.innerHTML = '<option value="">Seleccione un Curso</option>' +
+                    state.courses.map(c => `<option value="${c.id}">${c.nombre} ${c.seccion || ''} ${c.ciclo ? '(' + c.ciclo + ')' : ''}</option>`).join('');
+            } else {
+                select.innerHTML = '<option value="">Cargando cursos...</option>';
+                // Intentar recargar cursos si no hay
+                const client = getSupabase();
+                if (client) {
+                    client.from('cursos').select('*').order('nombre').then(({ data }) => {
+                        if (data) {
+                            state.courses = data;
+                            select.innerHTML = '<option value="">Seleccione un Curso</option>' +
+                                data.map(c => `<option value="${c.id}">${c.nombre} ${c.seccion || ''} ${c.ciclo ? '(' + c.ciclo + ')' : ''}</option>`).join('');
+                        }
+                    });
+                }
+            }
+            // Pre-seleccionar el curso actual si estamos en asistencia
+            const currentCourse = document.getElementById('course-select')?.value;
+            if (currentCourse) {
+                select.value = currentCourse;
+            }
+
+            modal.classList.remove('hidden');
+        };
+
+        window.closeAddStudentModal = function () {
+            document.getElementById('add-student-modal').classList.add('hidden');
+            document.getElementById('add-student-form').reset();
+        };
+
+        window.handleAddStudent = async function (e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.textContent = "Guardando...";
+            btn.disabled = true;
+
+            const client = getSupabase();
+            if (!client) return;
+
+            const cursoId = document.getElementById('new-student-course').value;
+            const nombre = document.getElementById('new-student-name').value.trim();
+            const apellido = document.getElementById('new-student-last').value.trim() || "...";
+            let documento = document.getElementById('new-student-doc').value.trim();
+
+            if (!documento || /[a-zA-Z]/.test(documento)) documento = null;
+
+            const alumnData = {
+                id_curso: cursoId,
+                nombre: nombre,
+                apellido: apellido,
+                documento: documento
+            };
+
+            try {
+                const { error } = await client.from('alumnos').insert([alumnData]);
+                if (error) {
+                    if (error.code === '23505') { // Unique violation
+                        alert('Error: Ya existe un alumno con ese documento.');
+                    } else {
+                        throw error;
+                    }
+                } else {
+                    alert('✅ Alumno guardado correctamente.');
+                    window.closeAddStudentModal();
+
+                    // Si estamos en la vista de asistencia y para el mismo curso, recargar la lista
+                    const currentCourse = document.getElementById('course-select')?.value;
+                    if (state.currentScreen === 'attendance' && currentCourse === cursoId) {
+                        await loadStudents(cursoId);
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error al guardar: ' + err.message);
+            } finally {
+                btn.textContent = "Guardar Alumno";
+                btn.disabled = false;
+            }
+        };
+
         // --- LÓGICA DE PANTALLAS ---
         async function initDashboard() {
             const dateTextEl = document.getElementById('current-date-text');
@@ -1334,9 +1471,24 @@
             if (!cursos) return;
             state.courses = cursos;
 
+            // Llenar el select de cursos del dashboard
+            const courseSelect = document.getElementById('dashboard-filter-course');
+            if (courseSelect && courseSelect.options.length <= 1) {
+                courseSelect.innerHTML = '<option value="">Todos los Cursos</option>' +
+                    cursos.map(c => `<option value="${c.id}">${c.nombre} ${c.seccion || ''} ${c.ciclo ? '(' + c.ciclo + ')' : ''}</option>`).join('');
+                courseSelect.onchange = () => initDashboard();
+            }
+            const selectedCourseId = courseSelect?.value;
+
             // 2. Obtener asistencias de la fecha filtrada
-            const { data: asisHoy } = await client.from('asistencias').select('*, alumnos(*)').eq('fecha', activeDate);
-            state.dashboardAsis = asisHoy || [];
+            let { data: asisHoy } = await client.from('asistencias').select('*, alumnos(*)').eq('fecha', activeDate);
+            asisHoy = asisHoy || [];
+
+            // Filtrar asistencias si hay un curso seleccionado
+            if (selectedCourseId) {
+                asisHoy = asisHoy.filter(a => a.alumnos?.id_curso === selectedCourseId);
+            }
+            state.dashboardAsis = asisHoy;
 
             // 3. Obtener total de alumnos por curso para el %
             const { data: totalAlums } = await client.from('alumnos').select('id, id_curso');
@@ -1350,11 +1502,19 @@
             let totalPresentesGlobal = 0;
             let totalAusentesGlobal = 0;
             let totalJustificadosGlobal = 0;
-            let totalAlumnosGlobal = totalAlums?.length || 0;
+
+            // Filtrar alumnos totales si hay un curso seleccionado
+            let alumsPoblacion = totalAlums || [];
+            if (selectedCourseId) {
+                alumsPoblacion = alumsPoblacion.filter(a => a.id_curso === selectedCourseId);
+            }
+            let totalAlumnosGlobal = alumsPoblacion.length;
             let cursosConAsistencia = 0;
 
             cursos.forEach(curso => {
-                const alumsEnCurso = (totalAlums || []).filter(a => a.id_curso === curso.id).length;
+                if (selectedCourseId && curso.id !== selectedCourseId) return;
+
+                const alumsEnCurso = alumsPoblacion.filter(a => a.id_curso === curso.id).length;
                 if (alumsEnCurso === 0) return;
 
                 labels.push(curso.nombre);
