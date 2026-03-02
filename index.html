@@ -875,6 +875,20 @@
             transform: rotate(90deg);
         }
 
+        .save-action-bar {
+            position: fixed;
+            bottom: 120px;
+            left: 24px;
+            right: 24px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 16px;
+            border-radius: 20px;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
         .hidden {
             display: none !important;
         }
@@ -1123,11 +1137,10 @@
                 </select>
                 <input type="date" id="attendance-date">
             </div>
-            <div id="students-list" class="students-container" style="padding-bottom: 200px;">
+            <div id="students-list" class="students-container" style="padding-bottom: 250px;">
                 <!-- Lista de alumnos -->
             </div>
-            <div class="action-bar hidden" id="attendance-actions"
-                style="position: fixed; bottom: 120px; left: 24px; right: 24px; z-index: 900; background: rgba(255,255,255,0.9); padding: 16px; border-radius: 20px; box-shadow: 0 -4px 20px rgba(0,0,0,0.05); backdrop-filter: blur(10px);">
+            <div class="save-action-bar hidden" id="attendance-actions">
                 <button id="save-attendance" class="btn-success" style="width: 100%;">Guardar y Copiar Resumen</button>
             </div>
         </div>
