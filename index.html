@@ -1053,14 +1053,10 @@
                     </div>
                     <div class="input-group" style="margin-bottom: 12px;">
                         <label style="display:block; margin-bottom: 4px; font-weight: 600; font-size: 14px;">Nombre
+                            Completo
                             *</label>
-                        <input type="text" id="new-student-name" required
-                            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background: rgba(0,0,0,0.02); font-family: 'Outfit';">
-                    </div>
-                    <div class="input-group" style="margin-bottom: 12px;">
-                        <label
-                            style="display:block; margin-bottom: 4px; font-weight: 600; font-size: 14px;">Apellido</label>
-                        <input type="text" id="new-student-last" placeholder="(Opcional)"
+                        <input type="text" id="new-student-name" required placeholder="Ej: PÉREZ GONZÁLEZ, JUAN JOSÉ"
+                            oninput="this.value = this.value.toUpperCase()"
                             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background: rgba(0,0,0,0.02); font-family: 'Outfit';">
                     </div>
                     <div class="input-group" style="margin-bottom: 20px;">
@@ -1462,8 +1458,22 @@
             if (!client) return;
 
             const cursoId = document.getElementById('new-student-course').value;
-            const nombre = document.getElementById('new-student-name').value.trim();
-            const apellido = document.getElementById('new-student-last').value.trim() || "...";
+            const fullNombreInput = document.getElementById('new-student-name').value.trim();
+            let nombre = fullNombreInput;
+            let apellido = "...";
+
+            if (fullNombreInput.includes(',')) {
+                const parts = fullNombreInput.split(',');
+                apellido = parts[0].trim();
+                nombre = parts[1].trim();
+            } else {
+                const parts = fullNombreInput.split(/\s+/);
+                if (parts.length >= 2) {
+                    apellido = parts[0];
+                    nombre = parts.slice(1).join(' ');
+                }
+            }
+
             let documento = document.getElementById('new-student-doc').value.trim();
 
             if (!documento || /[a-zA-Z]/.test(documento)) documento = null;
