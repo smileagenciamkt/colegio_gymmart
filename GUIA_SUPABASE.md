@@ -49,8 +49,10 @@ create table if not exists asistencias (
   id uuid primary key default uuid_generate_v4(),
   alumno_id uuid references alumnos(id),
   fecha date default current_date,
+  turno text default 'Regular',
   estado text check (estado in ('P', 'A', 'J')),
-  motivo text
+  motivo text,
+  unique(alumno_id, fecha, turno)
 );
 
 

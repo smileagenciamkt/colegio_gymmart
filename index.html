@@ -1014,6 +1014,23 @@
                 <div id="modal-history-list">
                     <!-- Historial aquí -->
                 </div>
+
+                <!-- Sección Administrativa (Trasladar Alumno) -->
+                <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(0,0,0,0.1);">
+                    <h3 style="font-size: 16px; margin-bottom: 12px; color: var(--text-main);">Administración</h3>
+                    <div class="input-group" style="margin-bottom: 12px;">
+                        <label style="display:block; margin-bottom: 4px; font-weight: 600; font-size: 14px;">Trasladar a
+                            otro curso:</label>
+                        <select id="transfer-course-select"
+                            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background: rgba(0,0,0,0.02); font-family: 'Outfit';">
+                            <!-- Opciones cargadas dinámicamente -->
+                        </select>
+                    </div>
+                    <button id="btn-transfer-student" class="btn-primary"
+                        style="width: 100%; background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">
+                        🔄 Trasladar Alumno
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1071,15 +1088,21 @@
                     </div>
                 </div>
                 <div class="filter-group" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <select id="dashboard-filter-turno"
+                        style="padding: 8px 12px; font-size: 14px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: white; font-family: 'Outfit'; outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <option value="Ambos">Ambos Turnos</option>
+                        <option value="Regular">☀️ Turno Regular</option>
+                        <option value="Opuesto">🌙 Turno Opuesto</option>
+                    </select>
                     <select id="dashboard-filter-course"
-                        style="padding: 8px 12px; font-size: 14px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: white; font-family: 'Outfit'; outline: none;">
+                        style="padding: 8px 12px; font-size: 14px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: white; font-family: 'Outfit'; outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                         <option value="">Todos los Cursos</option>
                     </select>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <label
                             style="margin: 0; font-size: 12px; font-weight: 700; color: var(--text-muted);">FECHA:</label>
                         <input type="date" id="dashboard-filter-date"
-                            style="padding: 8px 12px; font-size: 14px; width: auto; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: white; font-family: 'Outfit'; outline: none;">
+                            style="padding: 8px 12px; font-size: 14px; width: auto; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: white; font-family: 'Outfit'; outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                     </div>
                 </div>
             </header>
@@ -1127,13 +1150,24 @@
 
     <template id="tpl-attendance">
         <div class="attendance-view" style="padding-bottom: 90px;">
-            <header style="display: flex; justify-content: space-between; align-items: center;">
+            <header
+                style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                 <h2 style="margin: 0;">Tomar Asistencia</h2>
-                <button class="btn-primary" onclick="window.openAddStudentModal()"
-                    style="padding: 6px 16px; font-size: 14px; border-radius: 20px; box-shadow: 0 4px 12px rgba(99,102,241,0.3);">+
-                    Alumno</button>
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn-success" onclick="window.exportAttendanceToExcel()"
+                        style="padding: 6px 16px; font-size: 14px; border-radius: 20px; box-shadow: 0 4px 12px rgba(16,185,129,0.3); border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 700;">
+                        <span>📥</span> Exportar a Excel
+                    </button>
+                    <button class="btn-primary" onclick="window.openAddStudentModal()"
+                        style="padding: 6px 16px; font-size: 14px; border-radius: 20px; box-shadow: 0 4px 12px rgba(99,102,241,0.3);">+
+                        Alumno</button>
+                </div>
             </header>
             <div class="selection-bar glass-card">
+                <select id="turno-select" style="font-weight: 600; color: var(--primary-dark);">
+                    <option value="Regular">☀️ Turno Regular</option>
+                    <option value="Opuesto">🌙 Turno Opuesto</option>
+                </select>
                 <select id="course-select">
                     <option value="">Seleccionar Curso</option>
                 </select>
@@ -1221,6 +1255,7 @@
             students: [],
             attendance: {},
             attendanceDate: new Date().toISOString().split('T')[0],
+            attendanceTurno: 'Regular',
             dashboardAsis: []
         };
 
@@ -1496,8 +1531,23 @@
             const selectedCourseId = courseSelect?.value;
 
             // 2. Obtener asistencias de la fecha filtrada
-            let { data: asisHoy } = await client.from('asistencias').select('*, alumnos(*)').eq('fecha', activeDate);
+            let { data: asisHoy, error: errAsis } = await client.from('asistencias').select('*, alumnos(*)').eq('fecha', activeDate);
+            if (errAsis && errAsis.code === '42703') {
+                // Posible error de columna "turno" faltante, fallback suave
+                alert("Atención: Por favor actualiza la base de datos Supabase con la columna 'turno' como indica la guía para evitar problemas.");
+            }
             asisHoy = asisHoy || [];
+
+            // Filtrar asistencias si hay un turno seleccionado diferente a 'Ambos'
+            const turnoSelect = document.getElementById('dashboard-filter-turno');
+            if (turnoSelect) {
+                turnoSelect.onchange = () => initDashboard();
+                const selectedTurno = turnoSelect.value;
+                if (selectedTurno !== 'Ambos') {
+                    // Si un registro antiguo no tiene turno, se asume 'Regular'
+                    asisHoy = asisHoy.filter(a => (a.turno || 'Regular') === selectedTurno);
+                }
+            }
 
             // Filtrar asistencias si hay un curso seleccionado
             if (selectedCourseId) {
@@ -1664,6 +1714,16 @@
         }
 
         async function initAttendance() {
+            const turnoInput = document.getElementById('turno-select');
+            if (turnoInput) {
+                turnoInput.value = state.attendanceTurno;
+                turnoInput.addEventListener('change', async (e) => {
+                    state.attendanceTurno = e.target.value;
+                    const courseId = document.getElementById('course-select').value;
+                    if (courseId) await loadStudents(courseId);
+                });
+            }
+
             const dateInput = document.getElementById('attendance-date');
             if (dateInput) {
                 dateInput.value = state.attendanceDate;
@@ -1718,15 +1778,26 @@
                 // 2. Cargar Asistencia (Solo si hay alumnos)
                 state.attendance = {};
                 if (state.students.length > 0) {
-                    const { data: attendance, error: aErr } = await client
+                    // Try to load with turno if it exists, fallback to regular if error 42703 (column not exist) happens
+                    let { data: attendance, error: aErr } = await client
                         .from('asistencias')
                         .select('*')
                         .eq('fecha', state.attendanceDate)
                         .in('alumno_id', state.students.map(s => s.id));
 
-                    if (aErr) console.warn('Error cargando asistencia previa:', aErr);
+                    if (aErr) {
+                        console.warn('Error cargando asistencia (¿Falta columna turno?):', aErr);
+                        if (aErr.code === '42703') {
+                            // No detener el proceso si falta la columna turno, solo recargar sin filtrar por turno localmente,
+                            // o mostrar alerta sugerente para arreglar BD. Todo el error recae en no tener el turno.
+                            alert('⚠️ Falta la configuración de "Turnos Opuestos" en Supabase. Revisa la Guia_Supabase.md y actualiza la tabla de asistencias.');
+                        }
+                    }
 
                     if (attendance) {
+                        // Filtrar por turno del estado actual. Si en BD no hay turno (datos viejos), asumir 'Regular'
+                        attendance = attendance.filter(r => (r.turno || 'Regular') === state.attendanceTurno);
+
                         attendance.forEach(record => {
                             state.attendance[record.alumno_id] = record.estado;
                         });
@@ -1839,6 +1910,71 @@
                         <b class="${statusClass}">${statusText}</b>
                     </div>`;
                 }).join('');
+
+            // Configurar el selector de traslado de curso
+            const transferSelect = document.getElementById('transfer-course-select');
+            const btnTransfer = document.getElementById('btn-transfer-student');
+
+            if (transferSelect && state.courses) {
+                transferSelect.innerHTML = state.courses.map(c =>
+                    `<option value="${c.id}" ${c.id === student.id_curso ? 'selected' : ''}>${c.nombre} ${c.seccion || ''}</option>`
+                ).join('');
+
+                // Evitar múltiples listeners
+                btnTransfer.onclick = () => window.changeStudentCourse(studentId);
+            }
+        };
+
+        // --- LÓGICA TRASLADAR ALUMNO ---
+        window.changeStudentCourse = async (studentId) => {
+            const student = state.students.find(s => s.id === studentId);
+            const selectEl = document.getElementById('transfer-course-select');
+            const nuevoCursoId = selectEl.value;
+            const nuevoCursoNombre = selectEl.options[selectEl.selectedIndex].text;
+
+            if (!student || !nuevoCursoId) return;
+
+            if (student.id_curso === nuevoCursoId) {
+                alert('El alumno ya pertenece a este curso.');
+                return;
+            }
+
+            if (!confirm(`¿Estás seguro que deseas trasladar a ${student.nombre} al curso: ${nuevoCursoNombre}?`)) {
+                return;
+            }
+
+            const btnTransfer = document.getElementById('btn-transfer-student');
+            const originalText = btnTransfer.innerHTML;
+            btnTransfer.innerHTML = '⌛ Trasladando...';
+            btnTransfer.disabled = true;
+
+            const client = getSupabase();
+            try {
+                const { error } = await client
+                    .from('alumnos')
+                    .update({ id_curso: nuevoCursoId })
+                    .eq('id', studentId);
+
+                if (error) throw error;
+
+                alert('✅ Alumno trasladado exitosamente.');
+                closeModal();
+
+                // Si la vista actual es la asistencia y estamos viendo el curso viejo, recargamos la lista
+                const currentCourseId = document.getElementById('course-select')?.value;
+                if (state.currentScreen === 'attendance' && currentCourseId) {
+                    await loadStudents(currentCourseId);
+                } else if (state.currentScreen === 'dashboard') {
+                    initDashboard(); // Refrescar kpis
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert('❌ Error al trasladar: ' + err.message);
+            } finally {
+                btnTransfer.innerHTML = originalText;
+                btnTransfer.disabled = false;
+            }
         };
 
         async function saveAndCopySummary() {
@@ -1849,15 +1985,25 @@
             const attendanceRecords = Object.entries(state.attendance).map(([studentId, estado]) => ({
                 alumno_id: studentId,
                 fecha: date,
-                estado: estado
+                estado: estado,
+                turno: state.attendanceTurno
             }));
 
             if (attendanceRecords.length === 0) return alert('No hay datos para guardar.');
 
             const client = getSupabase();
             if (client) {
-                const { error } = await client.from('asistencias').upsert(attendanceRecords, { onConflict: 'alumno_id,fecha' });
-                if (error) return alert('Error al guardar: ' + error.message);
+                // Upsert con restricción única compuesta (alumno_id, fecha, turno)
+                const { error } = await client.from('asistencias').upsert(attendanceRecords, { onConflict: 'alumno_id,fecha,turno' });
+                if (error) {
+                    if (error.code === '42703' || error.message.includes('onConflict')) {
+                        // Fallback en caso de que aún no hayan creado la clave primaria compuesta o falte la columna
+                        const { error: err2 } = await client.from('asistencias').upsert(attendanceRecords, { onConflict: 'alumno_id,fecha' });
+                        if (err2) return alert('Error al guardar (Configura las restricciones en Supabase): ' + err2.message);
+                    } else {
+                        return alert('Error al guardar: ' + error.message);
+                    }
+                }
             }
 
             const presentes = attendanceRecords.filter(r => r.estado === 'P').length;
@@ -1884,7 +2030,8 @@
                 });
             }
 
-            const summary = `📋 RESUMEN DE ASISTENCIA\r\n📌 Curso: ${course.nombre}\r\n📅 Fecha: ${new Date(date).toLocaleDateString('es-PY')}\r\n\r\n✅ Presentes: ${presentes}\r\n\r\n❌ Hoy faltó:${ausentesTexto}\r\n\r\n📝 Justificados:${justificadosTexto}`;
+            const turnoLabel = state.attendanceTurno === 'Opuesto' ? '🌙 Turno Opuesto' : '☀️ Turno Regular';
+            const summary = `📋 RESUMEN DE ASISTENCIA\r\n📌 Curso: ${course.nombre}\r\n⏱️ Turno: ${turnoLabel}\r\n📅 Fecha: ${new Date(date).toLocaleDateString('es-PY')}\r\n\r\n✅ Presentes: ${presentes}\r\n\r\n❌ Hoy faltó:${ausentesTexto}\r\n\r\n📝 Justificados:${justificadosTexto}`;
 
             if (navigator.clipboard) {
                 navigator.clipboard.writeText(summary).then(() => {
@@ -1900,6 +2047,8 @@
         function initImport() {
             const excelInput = document.getElementById('excel-input');
             excelInput?.addEventListener('change', handleExcelImport);
+            var fileInput = document.getElementById("excel-input");
+            fileInput.value = '';
         }
 
         async function handleExcelImport(e) {
@@ -2069,6 +2218,151 @@
             };
             reader.readAsBinaryString(file);
         }
+
+        // --- EXPORTAR A EXCEL ---
+        window.exportAttendanceToExcel = async function () {
+            const courseId = document.getElementById('course-select')?.value;
+            if (!courseId) {
+                alert('⚠️ Por favor, selecciona un curso primero para exportar su asistencia.');
+                return;
+            }
+
+            const course = state.courses.find(c => c.id === courseId);
+            const turnoSelected = document.getElementById('turno-select')?.value || 'Regular';
+
+            const option = prompt('¿Qué datos deseas exportar?\n1: Solo ' + turnoSelected + ' \n2: Ambos Turnos (Regular y Opuesto)', '1');
+            if (option !== '1' && option !== '2') return;
+
+            const client = getSupabase();
+            if (!client) return alert("No hay conexión.");
+
+            // Mostrar un indicador de carga (opcional)
+            const btn = document.querySelector('button[onclick="window.exportAttendanceToExcel()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⌛ Generando Excel...';
+            btn.disabled = true;
+
+            try {
+                // 1. Traer todos los alumnos del curso
+                const { data: alums, error: errAlums } = await client.from('alumnos').select('*').eq('id_curso', courseId).order('apellido');
+                if (errAlums || !alums || alums.length === 0) {
+                    throw new Error("No se encontraron alumnos para este curso.");
+                }
+
+                // 2. Traer todas las asistencias de este curso (usando "in" con los IDs de alumnos)
+                const alumIds = alums.map(a => a.id);
+                // Para no saturar si hay cientos de alumnos, los traemos en un array si son < 1000. Supabase soporta filtros '.in'
+                const { data: asistencias, error: errAsis } = await client
+                    .from('asistencias')
+                    .select('fecha, estado, turno, alumno_id')
+                    .in('alumno_id', alumIds)
+                    .order('fecha', { ascending: true });
+
+                if (errAsis) throw new Error("Error cargando historial: " + errAsis.message);
+
+                let filteredAsis = asistencias || [];
+                // Aplicar homogeneización de turnos nulos heredados a 'Regular'
+                filteredAsis.forEach(a => { if (!a.turno) a.turno = 'Regular'; });
+
+                if (option === '1') {
+                    filteredAsis = filteredAsis.filter(a => a.turno === turnoSelected);
+                }
+
+                // 3. Identificar todas las fechas únicas que existen en estos datos
+                const uniqueDatesSet = new Set();
+                filteredAsis.forEach(a => uniqueDatesSet.add(a.fecha));
+                const sortedDates = Array.from(uniqueDatesSet).sort();
+
+                // 4. Preparar la estructura de filas para Excel
+                const excelData = [];
+
+                alums.forEach(alumno => {
+                    const row = {};
+                    row['Documento'] = alumno.documento || '';
+
+                    const fullName = (alumno.apellido && alumno.apellido !== '...')
+                        ? `${alumno.apellido}, ${alumno.nombre}`
+                        : alumno.nombre;
+
+                    row['Nombre Completo'] = fullName;
+
+                    let totalP = 0, totalA = 0, totalJ = 0;
+                    let totalClases = 0;
+
+                    // Llenar día por día
+                    sortedDates.forEach(date => {
+                        const dateLabel = new Date(date + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+
+                        if (option === '2') {
+                            // Turno Regular
+                            const arrReg = filteredAsis.find(a => a.alumno_id === alumno.id && a.fecha === date && a.turno === 'Regular');
+                            const valReg = arrReg ? arrReg.estado : '-';
+                            row[`${dateLabel} (Reg)`] = valReg;
+                            if (valReg !== '-') totalClases++;
+                            if (valReg === 'P') totalP++;
+                            if (valReg === 'A') totalA++;
+                            if (valReg === 'J') totalJ++;
+
+                            // Turno Opuesto
+                            const arrOpu = filteredAsis.find(a => a.alumno_id === alumno.id && a.fecha === date && a.turno === 'Opuesto');
+                            const valOpu = arrOpu ? arrOpu.estado : '-';
+                            row[`${dateLabel} (Opu)`] = valOpu;
+                            if (valOpu !== '-') totalClases++;
+                            if (valOpu === 'P') totalP++;
+                            if (valOpu === 'A') totalA++;
+                            if (valOpu === 'J') totalJ++;
+                        } else {
+                            // Solo el turno seleccionado
+                            const arr = filteredAsis.find(a => a.alumno_id === alumno.id && a.fecha === date && a.turno === turnoSelected);
+                            const val = arr ? arr.estado : '-';
+                            row[`${dateLabel}`] = val;
+
+                            if (val !== '-') totalClases++;
+                            if (val === 'P') totalP++;
+                            if (val === 'A') totalA++;
+                            if (val === 'J') totalJ++;
+                        }
+                    });
+
+                    // Calcular Resúmenes Finales
+                    row['Total Presente (P)'] = totalP;
+                    row['Total Ausente (A)'] = totalA;
+                    row['Total Justif (J)'] = totalJ;
+
+                    // Solo calculamos porcentaje sobre las clases en las que se le tomó lista a ESTE alumno.
+                    const porcentaje = totalClases > 0 ? Math.round((totalP / totalClases) * 100) : 0;
+                    row['% Presentismo'] = `${porcentaje}%`;
+
+                    excelData.push(row);
+                });
+
+                // 5. Crear el libro de Excel con SheetJS
+                const worksheet = XLSX.utils.json_to_sheet(excelData);
+                const workbook = XLSX.utils.book_new();
+
+                // Darle ancho a las columnas automáticamente
+                worksheet['!cols'] = [
+                    { wch: 12 }, // Documento
+                    { wch: 20 }, // Apellido
+                    { wch: 20 }  // Nombre
+                ];
+
+                const sheetName = (course.nombre + (course.seccion ? ' ' + course.seccion : '')).substring(0, 31); // Max 31 chars
+                XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+
+                // 6. Descargar el archivo
+                const turnoStr = option === '2' ? 'Ambos_Turnos' : turnoSelected;
+                const fileName = `Reporte_Asistencia_${course.nombre.replace(/\s+/g, '_')}_${turnoStr}.xlsx`;
+                XLSX.writeFile(workbook, fileName);
+
+            } catch (err) {
+                console.error(err);
+                alert("❌ Error al exportar a Excel: " + err.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        };
 
         // --- INICIALIZACIÓN ---
         document.addEventListener('DOMContentLoaded', async () => {
