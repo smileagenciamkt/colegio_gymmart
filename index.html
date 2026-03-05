@@ -1027,8 +1027,12 @@
                         </select>
                     </div>
                     <button id="btn-transfer-student" class="btn-primary"
-                        style="width: 100%; background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">
+                        style="width: 100%; margin-bottom: 8px; background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">
                         🔄 Trasladar Alumno
+                    </button>
+                    <button id="btn-delete-student" class="btn-primary"
+                        style="width: 100%; background: linear-gradient(135deg, #ef4444, #dc2626); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);">
+                        🗑️ Eliminar Alumno
                     </button>
                 </div>
             </div>
@@ -1486,6 +1490,26 @@
             };
 
             try {
+                // Validación de Duplicados
+                const { data: existingStudent, error: checkErr } = await client
+                    .from('alumnos')
+                    .select('id, id_curso')
+                    .ilike('nombre', nombre)
+                    .ilike('apellido', apellido)
+                    .maybeSingle();
+
+                if (checkErr && checkErr.code !== 'PGRST116') {
+                    console.error("Error validando duplicados:", checkErr);
+                }
+
+                if (existingStudent) {
+                    const cursoExistente = state.courses?.find(c => c.id === existingStudent.id_curso)?.nombre || "otro curso";
+                    alert(`⚠️ Alto ahí: Ya existe un alumno llamado "${fullNombreInput}" registrado en el curso: ${cursoExistente}. Evitando duplicado.`);
+                    btn.textContent = "Guardar Alumno";
+                    btn.disabled = false;
+                    return;
+                }
+
                 const { error } = await client.from('alumnos').insert([alumnData]);
                 if (error) {
                     if (error.code === '23505') { // Unique violation
@@ -1779,11 +1803,27 @@
                 const { data: students, error: sErr } = await client
                     .from('alumnos')
                     .select('*')
-                    .eq('id_curso', courseId)
-                    .order('apellido');
+                    .eq('id_curso', courseId);
 
                 if (sErr) throw sErr;
-                state.students = students || [];
+
+                // Ordenar alfabéticamente de forma segura en memoria (JS)
+                state.students = (students || []).sort((a, b) => {
+                    const getSortName = (alu) => {
+                        const namePart = (alu.nombre || "").trim();
+                        const lastPart = (alu.apellido && alu.apellido !== '...') ? alu.apellido.trim() : "";
+
+                        // Si tenemos apellido real, formamos "APELLIDO, NOMBRE" para ordenar
+                        // Si no hay apellido real, cruzamos los dedos y ordenamos por el nombre completo guardado
+                        if (lastPart) {
+                            return `${lastPart}, ${namePart}`.toLowerCase();
+                        } else {
+                            return namePart.toLowerCase();
+                        }
+                    };
+
+                    return getSortName(a).localeCompare(getSortName(b), 'es', { sensitivity: 'base' });
+                });
 
                 // 2. Cargar Asistencia (Solo si hay alumnos)
                 state.attendance = {};
@@ -1924,6 +1964,7 @@
             // Configurar el selector de traslado de curso
             const transferSelect = document.getElementById('transfer-course-select');
             const btnTransfer = document.getElementById('btn-transfer-student');
+            const btnDelete = document.getElementById('btn-delete-student');
 
             if (transferSelect && state.courses) {
                 transferSelect.innerHTML = state.courses.map(c =>
@@ -1932,6 +1973,68 @@
 
                 // Evitar múltiples listeners
                 btnTransfer.onclick = () => window.changeStudentCourse(studentId);
+            }
+
+            if (btnDelete) {
+                btnDelete.onclick = () => window.deleteStudent(studentId);
+            }
+        };
+
+        // --- LÓGICA ELIMINAR ALUMNO ---
+        window.deleteStudent = async (studentId) => {
+            const student = state.students.find(s => s.id === studentId);
+
+            if (!student) return;
+
+            const confirmacion = prompt(`PELIGRO: Estás a punto de eliminar permanentemente a "${student.apellido !== '...' ? student.apellido + ', ' : ''}${student.nombre}".\nTambién se borrará todo su historial de asistencia.\n\nEscribe "ELIMINAR" para confirmar:`);
+
+            if (confirmacion !== "ELIMINAR") {
+                if (confirmacion !== null) alert("Eliminación cancelada. El texto ingresado no es correcto.");
+                return;
+            }
+
+            const btnDelete = document.getElementById('btn-delete-student');
+            const originalText = btnDelete.innerHTML;
+            btnDelete.innerHTML = '⌛ Eliminando...';
+            btnDelete.disabled = true;
+
+            const client = getSupabase();
+            try {
+                // 1. Borrar asistencias (Foreign Key safeguard)
+                const { error: errAsis } = await client
+                    .from('asistencias')
+                    .delete()
+                    .eq('alumno_id', studentId);
+
+                if (errAsis) throw errAsis;
+
+                // 2. Borrar alumno
+                const { error: errAlu } = await client
+                    .from('alumnos')
+                    .delete()
+                    .eq('id', studentId);
+
+                if (errAlu) throw errAlu;
+
+                alert('✅ Alumno eliminado exitosamente.');
+                closeModal();
+
+                // Recargar lista si estamos en la vista asitencia
+                const currentCourseId = document.getElementById('course-select')?.value;
+                if (state.currentScreen === 'attendance' && currentCourseId) {
+                    await loadStudents(currentCourseId);
+                } else if (state.currentScreen === 'dashboard') {
+                    initDashboard(); // Refrescar kpis
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert('❌ Error al eliminar: ' + err.message);
+            } finally {
+                if (btnDelete) {
+                    btnDelete.innerHTML = originalText;
+                    btnDelete.disabled = false;
+                }
             }
         };
 
